@@ -1,0 +1,3 @@
+- High-value customers (Premium CLV quartile) have a churn rate of 14.0%, indicating a priority for retention strategies targeting this segment.
+- Low CLV quartile customers churn at 34.3%, suggesting they may be less engaged and could benefit from upselling or engagement campaigns.
+- Customers with higher CLV tend to have longer expected tenure, emphasizing the importance of long-term contracts to boost retention.
