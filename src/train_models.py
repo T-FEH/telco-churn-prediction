@@ -53,18 +53,19 @@ def train_logistic(X_train, y_train, X_val, y_val):
     return best_model
 
 def train_random_forest(X_train, y_train, X_val, y_val):
-    """Train and tune Random Forest."""
-    model = RandomForestClassifier(random_state=42)
+    """Train and tune Random Forest with class weighting."""
+    model = RandomForestClassifier(random_state=42, class_weight='balanced')
     param_grid = {
-        'model__n_estimators': [100, 200],
-        'model__max_depth': [10, 20],
-        'model__min_samples_leaf': [1, 2]
+        'model__n_estimators': [100, 200, 300],
+        'model__max_depth': [10, 20, 30],
+        'model__min_samples_leaf': [1, 2, 4],
+        'model__min_samples_split': [2, 5]
     }
     pipeline = Pipeline([
         ('preprocessor', create_preprocessor(X_train)),
         ('model', model)
     ])
-    grid = GridSearchCV(pipeline, param_grid, cv=3, scoring='f1', n_jobs=-1)
+    grid = GridSearchCV(pipeline, param_grid, cv=3, scoring='recall', n_jobs=-1)
     grid.fit(X_train, y_train)
     best_model = grid.best_estimator_
     print(f"Random Forest Best Params: {grid.best_params_}")
@@ -112,7 +113,6 @@ def evaluate_model(model, X, y, model_name):
 
 def test_high_risk_customer(model, encoders, X_train_columns):
     """Test a high-risk customer scenario."""
-    # Create a sample customer
     customer = pd.DataFrame({
         'gender': ['Male'],
         'SeniorCitizen': [1],
@@ -137,68 +137,52 @@ def test_high_risk_customer(model, encoders, X_train_columns):
         'services_count': [2],
         'monthly_to_total_ratio': [1200.0 / (12 * 100.0)],
         'internet_no_tech_support': [1],
-        'ExpectedTenure': [12 + 12],  # Month-to-month: tenure + 12
+        'ExpectedTenure': [12 + 12],
         'CLV': [100.0 * (12 + 12)]
     })
     
-    # Encode categorical columns
     for col, le in encoders.items():
         if col in customer.columns:
             customer[col] = le.transform(customer[col])
     
-    # Ensure column order matches X_train
     customer = customer[X_train_columns]
-    
-    # Predict directly with model (includes preprocessing)
     proba = model.predict_proba(customer)[:, 1][0]
     print(f"\nHigh-Risk Customer Churn Probability: {proba * 100:.1f}%")
     return proba
 
 def main():
-    # File paths
     processed_dir = 'data/processed/'
     models_dir = 'models/'
     os.makedirs(models_dir, exist_ok=True)
     
-    # Load data
     X_train, X_val, X_test, y_train, y_val, y_test = load_processed_data(processed_dir)
-    
-    # Store X_train columns for prediction
     X_train_columns = X_train.columns.tolist()
-    
-    # Handle class imbalance
     X_train_resampled, y_train_resampled = handle_class_imbalance(X_train, y_train)
-    
-    # Combine train and val for final training
     X_train_val = pd.concat([X_train_resampled, X_val], axis=0)
     y_train_val = pd.concat([y_train_resampled, y_val], axis=0)
-    
-    # Load encoders
     encoders = joblib.load(os.path.join(processed_dir, 'encoders.pkl'))
     
-    # Train models
     logistic = train_logistic(X_train_resampled, y_train_resampled, X_val, y_val)
     rf = train_random_forest(X_train_resampled, y_train_resampled, X_val, y_val)
     xgb = train_xgboost(X_train_resampled, y_train_resampled, X_val, y_val)
     
-    # Evaluate on test set
-    evaluate_model(logistic, X_test, y_test, "Logistic Regression")
-    evaluate_model(rf, X_test, y_test, "Random Forest")
-    evaluate_model(xgb, X_test, y_test, "XGBoost")
+    metrics = {}
+    metrics['Logistic Regression'] = evaluate_model(logistic, X_test, y_test, "Logistic Regression")
+    metrics['Random Forest'] = evaluate_model(rf, X_test, y_test, "Random Forest")
+    metrics['XGBoost'] = evaluate_model(xgb, X_test, y_test, "XGBoost")
     
-    # Save models and fitted preprocessor
     joblib.dump(logistic, os.path.join(models_dir, 'logistic.pkl'))
     joblib.dump(rf, os.path.join(models_dir, 'rf.pkl'))
     joblib.dump(xgb, os.path.join(models_dir, 'xgb.pkl'))
     joblib.dump(logistic.named_steps['preprocessor'], os.path.join(models_dir, 'preprocessor.pkl'))
     
-    # Test high-risk customer
     for model, name in [(logistic, "Logistic Regression"), (rf, "Random Forest"), (xgb, "XGBoost")]:
         proba = test_high_risk_customer(model, encoders, X_train_columns)
         if proba < 0.6:
             print(f"Warning: {name} predicts {proba * 100:.1f}% for high-risk customer (expected >60%)")
     
     print(f"Models and preprocessor saved to {models_dir}")
+    return metrics
 
 if __name__ == "__main__":
-    main()
+    metrics = main()

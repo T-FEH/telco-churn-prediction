@@ -9,7 +9,6 @@ from sklearn.metrics import roc_auc_score
 import shap
 import os
 
-# Cache data and models
 @st.cache_data
 def load_processed_data():
     """Load processed data for CLV analysis."""
@@ -29,15 +28,12 @@ def load_models():
     encoders = joblib.load(os.path.join(processed_dir, 'encoders.pkl'))
     return logistic, rf, xgb, preprocessor, encoders
 
-# Load data and models
 churn_rates = load_processed_data()
 logistic, rf, xgb, preprocessor, encoders = load_models()
 
-# Streamlit app
 st.title("Telco Customer Churn Prediction")
 tabs = st.tabs(["Predict", "Model Performance", "CLV Overview"])
 
-# Tab 1: Predict
 with tabs[0]:
     st.header("Predict Churn")
     with st.form("predict_form"):
@@ -67,23 +63,10 @@ with tabs[0]:
         submitted = st.form_submit_button("Predict")
         
         if submitted:
-            # Create customer DataFrame
             customer = pd.DataFrame({
                 'gender': [gender],
                 'SeniorCitizen': [senior_citizen],
-                'Partner': [partner],
-                'Dependents': [dependents],
-                'tenure': [tenure],
-                'PhoneService': [phone_service],
-                'MultipleLines': [multiple_lines],
-                'InternetService': [internet_service],
-                'OnlineSecurity': [online_security],
-                'OnlineBackup': [online_backup],
-                'DeviceProtection': [device_protection],
-                'TechSupport': [tech_support],
-                'StreamingTV': [streaming_tv],
-                'StreamingMovies': [streaming_movies],
-                'Contract': [contract],
+'act': [contract],
                 'PaperlessBilling': [paperless_billing],
                 'PaymentMethod': [payment_method],
                 'MonthlyCharges': [monthly_charges],
@@ -96,16 +79,13 @@ with tabs[0]:
                 'CLV': [monthly_charges * (tenure + 12 if contract == 'Month-to-month' else tenure + 24)]
             })
             
-            # Encode categorical columns
             for col, le in encoders.items():
                 if col in customer.columns:
                     customer[col] = le.transform(customer[col])
             
-            # Ensure column order matches training data
             X_train = pd.read_csv('data/processed/X_train.csv')
             customer = customer[X_train.columns]
             
-            # Predict with XGBoost
             proba = xgb.predict_proba(customer)[:, 1][0]
             label = "High" if proba >= 0.66 else "Med" if proba >= 0.33 else "Low"
             
@@ -113,7 +93,6 @@ with tabs[0]:
             st.write(f"**CLV**: ${customer['CLV'].iloc[0]:.2f}")
             st.write("**CLV Formula**: MonthlyCharges × ExpectedTenure")
             
-            # Local SHAP explanation
             explainer = shap.TreeExplainer(xgb.named_steps['model'])
             customer_transformed = preprocessor.transform(customer)
             shap_values = explainer.shap_values(customer_transformed)
@@ -123,19 +102,16 @@ with tabs[0]:
             shap.plots.waterfall(shap.Explanation(values=shap_values[0], base_values=explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value, data=customer_transformed[0], feature_names=preprocessor.get_feature_names_out()))
             st.pyplot(fig)
 
-# Tab 2: Model Performance
 with tabs[1]:
     st.header("Model Performance")
     metrics = {
         'Logistic Regression': {'Precision': 0.547, 'Recall': 0.725, 'F1': 0.624, 'AUC-ROC': 0.828},
-        'Random Forest': {'Precision': 0.589, 'Recall': 0.591, 'F1': 0.590, 'AUC-ROC': 0.816},
+        'Random Forest': {'Precision': 0.570, 'Recall': 0.666, 'F1': 0.614, 'AUC-ROC': 0.827},
         'XGBoost': {'Precision': 0.528, 'Recall': 0.690, 'F1': 0.598, 'AUC-ROC': 0.824}
     }
     st.write("**Metrics Table**")
     st.table(pd.DataFrame(metrics).T)
     
-    # ROC Curves
-    st.write("**ROC Curves**")
     fig, ax = plt.subplots()
     for model, name in [(logistic, "Logistic Regression"), (rf, "Random Forest"), (xgb, "XGBoost")]:
         X_test = pd.read_csv('data/processed/X_test.csv')
@@ -150,7 +126,6 @@ with tabs[1]:
     ax.legend()
     st.pyplot(fig)
     
-    # Confusion Matrix (XGBoost)
     st.write("**Confusion Matrix (XGBoost)**")
     y_pred = xgb.predict(X_test)
     cm = confusion_matrix(y_test, y_pred)
@@ -158,7 +133,6 @@ with tabs[1]:
     ConfusionMatrixDisplay(cm).plot(ax=ax)
     st.pyplot(fig)
     
-    # Global Feature Importance
     st.write("**Global Feature Importance**")
     logistic_importance = pd.read_csv('data/processed/plots/logistic_importance.csv')
     st.write("**Logistic Regression**")
@@ -181,7 +155,6 @@ with tabs[1]:
     else:
         st.error(f"File not found: {xgb_plot}")
 
-# Tab 3: CLV Overview
 with tabs[2]:
     st.header("CLV Overview")
     clv_dist_plot = 'data/processed/plots/clv_distribution.png'
