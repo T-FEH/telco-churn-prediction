@@ -163,7 +163,7 @@ with tabs[1]:
     st.pyplot(fig)
     
     st.write("**Random Forest**")
-    rf_plot = 'data/processed/plots/random_forest_shap_summary.png'
+    rf_plot = 'data/processed/plots/random forest_shap_summary.png'
     if os.path.exists(rf_plot):
         st.image(rf_plot)
     else:
