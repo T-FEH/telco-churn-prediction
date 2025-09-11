@@ -66,12 +66,24 @@ with tabs[0]:
             customer = pd.DataFrame({
                 'gender': [gender],
                 'SeniorCitizen': [senior_citizen],
-'act': [contract],
+                'Partner': [partner],
+                'Dependents': [dependents],
+                'tenure': [tenure],
+                'PhoneService': [phone_service],
+                'MultipleLines': [multiple_lines],
+                'InternetService': [internet_service],
+                'OnlineSecurity': [online_security],
+                'OnlineBackup': [online_backup],
+                'DeviceProtection': [device_protection],
+                'TechSupport': [tech_support],
+                'StreamingTV': [streaming_tv],
+                'StreamingMovies': [streaming_movies],
+                'Contract': [contract],
                 'PaperlessBilling': [paperless_billing],
                 'PaymentMethod': [payment_method],
                 'MonthlyCharges': [monthly_charges],
                 'TotalCharges': [total_charges],
-                'tenure_bucket': [pd.cut([tenure], bins=[0, 6, 12, 24, float('inf')], labels=['0-6m', '6-12m', '12-24m', '24m+'])[0]],
+                'tenure_bucket': [str(pd.cut([tenure], bins=[0, 6, 12, 24, float('inf')], labels=['0-6m', '6-12m', '12-24m', '24m+'], include_lowest=True)[0])],
                 'services_count': [sum(1 for x in [phone_service, multiple_lines, internet_service, online_security, online_backup, device_protection, tech_support, streaming_tv, streaming_movies] if x in ['Yes', 'DSL', 'Fiber optic'])],
                 'monthly_to_total_ratio': [total_charges / max(1, tenure * monthly_charges)],
                 'internet_no_tech_support': [1 if internet_service in ['DSL', 'Fiber optic'] and tech_support == 'No' else 0],
@@ -79,12 +91,21 @@ with tabs[0]:
                 'CLV': [monthly_charges * (tenure + 12 if contract == 'Month-to-month' else tenure + 24)]
             })
             
+            # Encode categorical columns, including tenure_bucket
             for col, le in encoders.items():
                 if col in customer.columns:
-                    customer[col] = le.transform(customer[col])
+                    try:
+                        customer[col] = le.transform(customer[col])
+                    except ValueError as e:
+                        st.error(f"Error encoding {col}: {e}")
+                        st.stop()
             
+            # Load X_train and align columns
             X_train = pd.read_csv('data/processed/X_train.csv')
-            customer = customer[X_train.columns]
+            missing_cols = [col for col in X_train.columns if col not in customer.columns]
+            for col in missing_cols:
+                customer[col] = 0  # Add missing columns with default value
+            customer = customer[X_train.columns]  # Reorder to match X_train
             
             proba = xgb.predict_proba(customer)[:, 1][0]
             label = "High" if proba >= 0.66 else "Med" if proba >= 0.33 else "Low"
