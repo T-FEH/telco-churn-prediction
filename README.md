@@ -134,7 +134,7 @@ CLV formula: CLV = MonthlyCharges × ExpectedTenure.
 
 ## 🌍 Deployment
 
-* **Streamlit App (Community Cloud):** \[https://telco-churn-prediction-project.streamlit.app/]
-* **Demo Video:** \[https://www.loom.com/share/f2c535a9127a4b41a0d7f93bb49bc3e3?sid=1d7b7562-61f6-4774-8612-a0a73a623b8e]
+* **Streamlit App (Community Cloud):** https://telco-churn-prediction-project.streamlit.app/
+* **Demo Video:** https://www.loom.com/share/f2c535a9127a4b41a0d7f93bb49bc3e3?sid=1d7b7562-61f6-4774-8612-a0a73a623b8e
 
 ---
