@@ -57,6 +57,7 @@ def encode_categorical(df):
 def compute_clv(df):
     """Compute CLV based on Expected Tenure."""
     # Assumption: Expected Tenure = tenure + 12 months if no contract, else tenure + 24 months
+    # (Documented: Month-to-month contracts get +12 months; one-year/two-year get +24 months for retention estimate)
     df['ExpectedTenure'] = df.apply(
         lambda x: x['tenure'] + 12 if x['Contract'] == 'Month-to-month' else x['tenure'] + 24, axis=1
     )

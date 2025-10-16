@@ -105,6 +105,8 @@ streamlit run app.py
   * Cleans dataset
   * Engineers features (`tenure_bucket`, `services_count`, `internet_no_tech_support`, `CLV`)
   * Saves splits and encoders
+  * CLV Assumption: ExpectedTenure = current tenure + 12 months (month-to-month contracts) or +24 months (one-year/two-year contracts), to estimate future retention.
+CLV formula: CLV = MonthlyCharges × ExpectedTenure.
 
 * **CLV Analysis (`clv_analysis.py`)**
 
@@ -132,7 +134,7 @@ streamlit run app.py
 
 ## 🌍 Deployment
 
-* **Streamlit App (Community Cloud):** \[Insert app URL here]
-* **Demo Video:** \[Insert video URL after recording]
+* **Streamlit App (Community Cloud):** \[https://telco-churn-prediction-project.streamlit.app/]
+* **Demo Video:** \[https://www.loom.com/share/f2c535a9127a4b41a0d7f93bb49bc3e3?sid=1d7b7562-61f6-4774-8612-a0a73a623b8e]
 
 ---
